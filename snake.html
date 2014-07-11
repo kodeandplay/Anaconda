@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang='en'>
+<head>
+  <title>Snake</title>
+  <meta charset='utf-8' />
+  <meta name='viewport' content='width=device-width,initial-scale=1.0' />
+  <meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'/>
+  <link rel='stylesheet' type='text/css' href='../../reset.css' />
+  <!--[if lt IE 9]>
+    <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+ <![endif]-->
+<style>
+canvas {border:2px solid black;}
+
+</style>
+</head>
+<body>
+<canvas id='canvas' width='700' height='500'></canvas>
+
+<script src='explosion.js'></script>
+<script>
+(function() {
+window.onload = init;
+var canvas, ctx, intvl, alive = true;
+
+function init() {
+  document.body.addEventListener('keydown',changeDirection);
+  canvas = document.getElementById('canvas');
+  ctx = canvas.getContext('2d');
+  snake.addSegments(snake.loc);
+  for(var i = 11; i <= 30; i++) {
+    snake.addSegments({x:10,y:i});             
+  }
+  game.placeFood();
+  game.drawFood();
+  game.drawSnake();
+  start();
+}
+
+function start() {
+  intvl = setInterval(function() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    update(100);
+    game.drawFood();
+    if(alive) snake.moveSnake();
+    if(!game.checkFood() && alive) snake.crashCheck();
+    game.drawSnake();
+  },100);
+}
+
+/* left arrow	37 -- up arrow 38 -- right arrow -- 39 down arrow 40 */
+function changeDirection(evt) {
+  var evt = window.event ? window.event : evt;
+  if (evt.keyCode == 37 && snake.direction != 'right')
+    snake.direction = 'left' 
+  else if (evt.keyCode == 38 && snake.direction != 'down')
+    snake.direction = 'up';
+  else if (evt.keyCode == 39 && snake.direction != 'left')
+    snake.direction = 'right';
+  else if (evt.keyCode == 40 && snake.direction != 'up')
+    snake.direction = 'down';
+}
+
+var snake = {
+  loc: {x:10,y:10},
+  segments: [],
+  direction: 'right',
+  
+  addSegments: function(segment) {
+    this.segments.push(segment);
+  },
+  
+  moveSnake: function() {    
+    for(var i = this.segments.length - 1; i > 0; i--) {
+      this.segments[i].x = this.segments[i-1].x;
+      this.segments[i].y = this.segments[i-1].y;
+    }
+    
+    if(/right/.test(this.direction)) {
+      this.segments[0].x += 1;
+    } else if (/left/.test(this.direction)) {
+      this.segments[0].x -= 1;
+    } else if (/up/.test(this.direction)) {
+      this.segments[0].y -= 1;
+    } else if (/down/.test(this.direction)) {
+      this.segments[0].y += 1;
+    }
+  },
+  
+  crashCheck: function() {
+    // check bounds
+    var head = this.segments[0];
+    if(this.loc.x < 0 || this.loc.x > 69 || this.loc.y < 0 || this.loc.y > 49) {
+      console.log('Out of bounds!');
+      alive = false;
+      createExplosion(head,'rgba(200,0,0,0.6)');
+      createExplosion(head,'rgba(255,0,0,0.6)');
+      createExplosion(head,'rgba(255,0,127,0.6)');
+      createExplosion(head,'rgba(50,0,100,0.6)',function() { clearInterval(intvl); });      
+    } else {
+      for(var i = 4, max = this.segments.length; i < max; i++) {
+        if(this.segments[i].x == head.x && this.segments[i].y == head.y) {
+          alive = false;
+          createExplosion(head,'rgba(255,0,0,0.6)');
+          createExplosion(head,'rgba(255,0,127,0.6)');
+          createExplosion(head,'rgba(200,0,0,0.6)');
+          createExplosion(head,'rgba(50,0,100,0.6)',function() { clearInterval(intvl); });      
+        }
+      }
+    }
+  }
+};
+
+var game = {
+  cellWidth: 10,
+  cellHeight: 10,
+  s: snake, 
+  food: {},
+  
+  placeFood: function() {
+    var x_coord, y_coord, collision; 
+    while(true) {
+      collision = false;
+      x_coord = Math.floor(Math.random() * canvas.width/this.cellWidth);
+      y_coord = Math.floor(Math.random() * canvas.height/this.cellHeight);
+      
+      this.s.segments.forEach(function(segment) {
+        if(segment.x == x_coord && segment.y == y_coord) { collision = true; }
+      });
+      if(!collision) break;
+    }
+    this.food = {x:x_coord,y:y_coord};
+  },
+  
+  drawSnake: function() {
+    var self = this;
+    this.s.segments.forEach(function(segment){
+      ctx.beginPath();
+      ctx.fillStyle = 'black';
+      ctx.rect(segment.x*self.cellWidth,segment.y*self.cellHeight,self.cellWidth,self.cellHeight);
+      ctx.fill();
+      ctx.lineWidth = 0.5;
+      ctx.strokeStyle = 'red';
+      ctx.stroke();
+    });
+  },
+  
+  checkFood: function() {    
+    if(this.s.segments[0].x == this.food.x && this.s.segments[0].y == this.food.y) {
+      this.s.addSegments(this.food);
+      createExplosion(this.food,'rgba(255,0,0,0.6)');
+      createExplosion(this.food,'rgba(255,0,127,0.6)');
+      this.placeFood();
+      return true;
+    }
+  },
+  
+  drawFood: function() {
+    ctx.fillStyle = 'red';
+    ctx.fillRect(this.food.x*this.cellWidth,this.food.y*this.cellHeight,this.cellWidth,this.cellHeight);
+  }
+}
+})();
+</script>
+</body>
+</html>
